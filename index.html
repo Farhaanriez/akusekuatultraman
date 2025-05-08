@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>We Are ASU</title>
+<style>
+  /* Reset and base */
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  body, html {
+    height: 100%;
+    width: 100%;
+  }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: #ecf0f1;
+    max-width: 350px;
+    height: 700px;
+    margin: 0 auto;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    padding: 15px 14px;
+    overflow: hidden; /* prevent page scroll */
+    position: relative;
+  }
+
+  #particleCanvas {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 350px;
+    height: 700px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1 {
+    font-weight: 700;
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 14px;
+    letter-spacing: 0.08em;
+    color: #f39c12;
+    text-shadow: 0 0 2px #d35400a0;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Top page nav */
+  #pageNav {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 18px;
+    position: relative;
+    z-index: 1;
+  }
+  #pageNav button {
+    background: transparent;
+    border: 2px solid #f39c12;
+    color: #f39c12;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 8px 26px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    outline-offset: 2px;
+  }
+  #pageNav button.active,
+  #pageNav button:hover {
+    background: #f39c12;
+    color: #2c3e50;
+    box-shadow: 0 0 8px #d3540011;
+  }
+
+  /* Shared container */
+  .container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    z-index: 1;
+    min-height: 0; /* supaya scroll aktif */
+  }
+
+  /* Group photo section */
+  #groupSection {
+    background: #34495e;
+    border-radius: 16px;
+    padding: 18px;
+    user-select: text;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    color: #ecf0f1cc;
+    max-height: 600px;
+    min-height: 0;
+  }
+  #groupSection.hidden {
+    display: none;
+  }
+  #groupSection h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #f39c12;
+    margin-bottom: 10px;
+    text-align: center;
+    text-shadow: 0 0 4px #d35400a0;
+  }
+  #groupDescription {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #dcdde1cc;
+    margin-bottom: 16px;
+    text-align: center;
+    line-height: 1.3;
+    font-style: italic;
+  }
+  #groupFooter {
+    font-size: 0.95rem;
+    color: #ffffff;
+    font-style: italic;
+    text-align: center;
+    margin-top: 12px;
+    user-select: none;
+    text-shadow: 0 0 6px #00000088;
+  }
+  .group-photos {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .group-photos img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px #00000088;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .group-photos img:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 24px #f39c12dd;
+  }
+
+  /* Overlay for enlarged group photo */
+  #photoOverlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(44, 62, 80, 0.93);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  #photoOverlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #photoOverlay img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 16px; /* Ubah ini untuk foto anggota tim */
+    box-shadow: 0 0 30px #f39c12cc;
+    image-rendering: auto;
+    cursor: default;
+    object-fit: contain;
+  }
+  #photoOverlay button {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: #f39c12;
+    border: none;
+    color: #2c3e50;
+    font-weight: 700;
+    font-size: 1.3rem;
+    padding: 6px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 0 12px #f39c12dd;
+    transition: background 0.25s ease;
+    user-select: none;
+  }
+  #photoOverlay button:hover, #photoOverlay button:focus {
+    background: #d35400;
+    color: #ecf0f1;
+    outline: none;
+  }
+
+  /* Carousel container */
+  #carouselContainer {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+  #carouselContainer.hidden {
+    display: none;
+  }
+  #carouselHeader {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #f39c12;
+    margin-bottom: 12px;
+    user-select: none;
+    text-align: center;
+    text-shadow: 0 0 4px #d35400a0;
+  }
+  #carousel {
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    gap: 14px;
+    padding-bottom: 8px;
+    height: 100%;
+  }
+  #carousel::-webkit-scrollbar {
+    height: 8px;
+  }
+  #carousel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  #carousel::-webkit-scrollbar-thumb {
+    background: #f39c12aa;
+    border-radius: 7px;
+  }
+
+  /* Member card */
+  .member-card {
+    flex: 0 0 250px;
+    background: #3b4b5a;
+    border-radius: 14px;
+    box-shadow: 0 4px 10px #000000aa;
+    padding: 18px 16px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #ecf0f1;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    cursor: pointer;
+    user-select: none;
+  }
+  .member-card:hover {
+    box-shadow: 0 9px 22px #e67e22cc;
+    background: #4a5b6b;
+    transform: translateY(-4px);
+  }
+
+  .member-photo {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%; /* Preview bulat */
+    object-fit: cover;
+    border: 3.5px solid #f39c12cc;
+    box-shadow: 0 0 16px #f39c12aa;
+    margin-bottom: 14px;
+    pointer-events: none;
+  }
+  .member-name {
+    font-size: 1.8rem;
+    color: #f39c12cc;
+    margin-bottom: 6px;
+    user-select: none;
+    text-shadow: 0 0 6px #d35400a0;
+  }
+  .member-info {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    font-style: italic;
+    color: #ffffff;
+  }
+  .info-label {
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  /* Contact links */
+  .contact-links {
+    margin-top: 12px;
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+  }
+  .contact-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 1rem;
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+    transition: color 0.25s ease;
+  }
+  .contact-link:hover {
+    color: #fff8db;
+  }
+  .contact-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+  }
+
+  /* Member detail page */
+  #memberDetail {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    background: #283845;
+    border-radius: 20px;
+    padding: 20px 26px 70px;
+    box-shadow: 0 12px 28px #f39c12cc;
+    color: #d8d9db;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    position: relative;
+    font-weight: 700;
+    user-select: none;
+    max-height: 650px;
+    z-index: 2;
+  }
+  #memberDetail.active {
+    display: flex;
+  }
+  #memberDetail img {
+    width: 170px;
+    height: 230px; /* Persegi panjang portrait */
+    border-radius: 20px;
+    object-fit: cover;
+    border: 4px solid #f39c12cc;
+    box-shadow: 0 0 24px #f1c40fcc;
+    margin-bottom: 18px;
+  }
+  #memberDetail h2 {
+    font-size: 2rem;
+    color: #f39c12cc;
+    margin-bottom: 15px;
+    text-align: center;
+    text-shadow: 0 0 6px #d35400a0;
+  }
+  #memberDetail .detail-info {
+    font-size: 1.05rem;
+    margin-bottom: 14px;
+    max-width: 320px;
+    user-select: text;
+    color: #ffffff;
+  }
+  #memberDetail .detail-info .info-label {
+    font-weight: 800;
+    color: #ffffff;
+  }
+  #memberDetail .moto {
+    font-style: italic;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-top: 8px;
+    max-width: 320px;
+    text-align: center;
+    user-select: text;
+    color: #ffffff;
+    text-shadow:
+      0 0 6px #fff,
+      0 0 12px #ffb64a,
+      0 0 20px #ffb64a88,
+      0 0 30px #f39c12aa;
+  }
+  #memberDetail .audio-player {
+    width: 100%;
+    margin-top: 26px;
+    margin-bottom: 16px;
+  }
+  #memberDetail audio {
+    width: 100%;
+    outline: none;
+    border-radius: 16px;
+    background: #d4ac0d26;
+    box-shadow: 0 0 20px #f39c12cc;
+  }
+
+  /* Back button fixed bottom */
+  #backBtn {
+    background: transparent;
+    border: 3px solid #f39c12cc;
+    color: #f39c12cc;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 700;
+    padding: 8px 26px;
+    align-self: center;
+    transition: background 0.3s ease, color 0.3s ease;
+    user-select: none;
+    position: fixed;
+    bottom: 14px;
+    width: calc(100% - 60px);
+    max-width: 320px;
+    box-shadow: 0 0 8px #f39c12cc;
+    z-index: 20;
+  }
+  #backBtn:hover {
+    background: #f39c12cc;
+    color: #2c3e50;
+    box-shadow: 0 0 15px #d3540022;
+  }
+
+  /* Scrollbars */
+  #groupSection::-webkit-scrollbar,
+  #carousel::-webkit-scrollbar,
+  #memberDetail::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+  #groupSection::-webkit-scrollbar-thumb,
+  #carousel::-webkit-scrollbar-thumb,
+  #memberDetail::-webkit-scrollbar-thumb {
+    background: #d3540077;
+    border-radius: 7px;
+  }
+  #groupSection::-webkit-scrollbar-track,
+  #carousel::-webkit-scrollbar-track,
+  #memberDetail::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Responsive */
+  @media (max-width: 350px) {
+    body {
+      padding: 15px 12px;
+      height: 700px;
+    }
+    #particleCanvas {
+      height: 700px;
+    }
+    #carousel {
+      gap: 14px;
+    }
+    .member-card {
+      flex: 0 0 235px;
+      padding: 16px 14px 20px 14px;
+    }
+    .member-photo {
+      width: 130px;
+      height: 130px;
+      margin-bottom: 12px;
+      border-radius: 50%; /* Tetap bulat */
+    }
+    #memberDetail {
+      max-height: 680px;
+      padding-bottom: 70px;
+    }
+    #memberDetail img {
+      width: 170px; /* Ubah ini untuk potrait */
+      height: 230px; /* Ubah ini untuk potrait */
+      border-radius: 10px; /* Ubah untuk sudut yang lebih tajam */
+      object-fit: cover;
+    }
+    #memberDetail h2 {
+      font-size: 1.7rem;
+    }
+    #memberDetail .detail-info {
+      font-size: 1rem;
+      max-width: 280px;
+    }
+    #memberDetail .moto {
+      font-size: 1.1rem;
+      max-width: 280px;
+    }
+    #backBtn {
+      padding: 8px 24px;
+      font-size: 0.95rem;
+      width: calc(100% - 48px);
+      max-width: 280px;
+      bottom: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+<canvas id="particleCanvas" aria-hidden="true"></canvas>
+<h1>Aku Sekuat Ultraman Team</h1>
+
+<div id="pageNav" role="tablist" aria-label="Navigasi halaman utama">
+  <button type="button" role="tab" class="active" aria-selected="true" aria-controls="groupSection" id="navGroup">Foto Bersama</button>
+  <button type="button" role="tab" aria-selected="false" aria-controls="carouselContainer" id="navMembers">Anggota ASU</button>
+</div>
+
+<div class="container">
+
+  <!-- Group Photo Section -->
+  <section id="groupSection" aria-label="Foto Bersama Tim" role="tabpanel" aria-labelledby="navGroup" tabindex="0">
+    <h2>We Are</h2>
+    <p id="groupDescription">
+      Kalo kumpul di circle ini ngomong serius cuma mentok 3 menit, sisanya pasti udah mengobservasi tingkah laku suatu individu maupun kelompok (ghibah). Tapi sekalinya serius kita bisa mengulik info sedalam-dalamnya layaknya intel. Anggotanya cuma 12 orang sih, tapi bisa kalahin ramenya sekampung.
+    </p>
+    <div class="group-photos">
+      <img src="https://images.pexels.com/photos/31986336/pexels-photo-31986336.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 1" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31986339/pexels-photo-31986339.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 2" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31986337/pexels-photo-31986337.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 3" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31986341/pexels-photo-31986341.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 4" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31986343/pexels-photo-31986343.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 5" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31986333/pexels-photo-31986333.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 6" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31986338/pexels-photo-31986338.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 7" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31986332/pexels-photo-31986332.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 8" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31986335/pexels-photo-31986335.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 9" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31986334/pexels-photo-31986334.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 10" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31987646/pexels-photo-31987646.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 11" loading="lazy" />
+      <img src="https://images.pexels.com/photos/31986340/pexels-photo-31986340.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Foto Tim 12" loading="lazy" />
+    </div>
+  </section>
+
+  <!-- Carousel Section -->
+  <section id="carouselContainer" aria-label="Perkenalan Anggota Tim" role="tabpanel" aria-labelledby="navMembers" tabindex="0" class="hidden">
+    <div id="carouselHeader">Member Kita</div>
+    <div id="carousel" role="list" tabindex="0">
+      <!-- Member cards populated by JS -->
+    </div>
+  </section>
+
+  <!-- Member Detail Page -->
+  <section id="memberDetail" aria-live="polite" aria-atomic="true" tabindex="0">
+    <img id="detailPhoto" alt="Foto Anggota" />
+    <h2 id="detailFullName"></h2>
+    <div class="detail-info"><span class="info-label">Umur: </span><span id="detailAge"></span> tahun</div>
+    <div class="detail-info"><span class="info-label">Hobi: </span><span id="detailHobby"></span></div>
+    <div class="detail-info"><span class="info-label">Cita-cita: </span><span id="detailAmbition"></span></div>
+    <div class="detail-info moto" id="detailMoto"></div>
+    <div class="contact-links">
+        <a class="contact-link" id="whatsappLink" href="#" target="_blank" aria-label="WhatsApp">
+            <span class="contact-icon">📞</span> WhatsApp
+        </a>
+        <a class="contact-link" id="instagramLink" href="#" target="_blank" aria-label="Instagram">
+            <span class="contact-icon">📸</span> Instagram
+        </a>
+    </div>
+    <div class="audio-player" aria-label="Lagu Favorit">
+      <audio id="detailAudio" controls preload="none" src="">
+        Browser Anda tidak mendukung elemen audio.
+      </audio>
+    </div>
+    <button id="backBtn" aria-label="Kembali ke daftar anggota">Kembali</button>
+  </section>
+
+  <p style="color: white; font-style: italic; text-align: center; margin-top: 20px;">Kami bersama sejak 2022.</p>
+
+</div>
+
+<!-- Overlay for enlarged group photo -->
+<div id="photoOverlay" role="dialog" aria-modal="true" aria-hidden="true" tabindex="-1">
+  <button id="closeOverlayBtn" aria-label="Tutup foto besar">&times;</button>
+  <img alt="Foto besar tim" />
+</div>
+
+<script>
+  const members = [
+    {
+      id: 1,
+      shortName: "'Auva",
+      fullName: "'Auva Zamzami Bahrudin",
+      age: 19,
+      hobby: "Desain Grafis",
+      ambition: "Guru",
+      moto: "Jangan hanya hidup dengan mimpi, tapi hidupkan mimpimu.",
+      carouselPhoto: "https://images.pexels.com/photos/31958552/pexels-photo-31958552.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      detailPhoto: "https://images.pexels.com/photos/31980272/pexels-photo-31980272.jpeg", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/py1hixb9yjlxw5mdn4ls0/aupa.mp3?rlkey=jaooxlwo19tos3l6eq7escqgl&st=lbc46nk1&raw=1",
+      whatsapp: "https://wa.me/+6281246789080",
+      instagram: "https://instagram.com/auvaa.zmzami_/"
+    },
+    {
+      id: 2,
+      shortName: "Swari",
+      fullName: "Dwi Ratna Swari",
+      age: 18,
+      hobby: "Memandang duit",
+      ambition: "Menjadi orang sukses",
+      moto: "Banyakin nafas biar nggak stres.",
+      carouselPhoto: "https://images.pexels.com/photos/31956583/pexels-photo-31956583.jpeg?auto=compress&cs=tinysrgb&w=600&lazy=load",
+      detailPhoto: "https://images.pexels.com/photos/31989343/pexels-photo-31989343.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/fcvperejjjt7m3x4wmw7y/zahra.mp4?rlkey=ufqhfhe73b1bkdgzambu47if5&st=b0qwikuy&raw=1",
+      whatsapp: "https://wa.me/+6285708464987",
+      instagram: "https://instagram.com/suwarsuwir4/"
+    },
+    {
+      id: 3,
+      shortName: "Farhan",
+      fullName: "Farhan Rizky Alkarim",
+      age: 19,
+      hobby: "Tidur & ML-an",
+      ambition: "Software Engineer",
+      moto: "Lakukan apa yang kamu bisa and do the best.",
+      carouselPhoto: "https://images.pexels.com/photos/31956357/pexels-photo-31956357.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      detailPhoto: "https://images.pexels.com/photos/31986577/pexels-photo-31986577.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/drmt4loawz0b545laooy5/farhan.mp4?rlkey=9thlrz8kd9qktr4u7jj6db2uj&st=7utwq9f5&raw=1",
+      whatsapp: "https://wa.me/6281331650957",
+      instagram: "https://instagram.com/farhaanriez/"
+    },
+    {
+      id: 4,
+      shortName: "Gelis",
+      fullName: "Gelis Widia Atma",
+      age: 18,
+      hobby: "Karaoke",
+      ambition: "Make parents happy",
+      moto: "Jangan hidup seperti Newton kebanyakan gaya.",
+      carouselPhoto: "https://images.pexels.com/photos/31960055/pexels-photo-31960055.jpeg",
+      detailPhoto: "https://images.pexels.com/photos/31986803/pexels-photo-31986803.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/3kk7lon931j7r6qij1ffp/gelis.mp3?rlkey=fs1si0ja3830ud2oo4fj3jrm6&st=6ucg28m1&raw=1",
+      whatsapp: "https://wa.me/+6285816312481",
+      instagram: "https://instagram.com/glswatma_w/"
+    },
+    {
+      id: 5,
+      shortName: "Thoriqa",
+      fullName: "Izzaty Thoriqa Maghfirina",
+      age: 18,
+      hobby: "Halusinasi",
+      ambition: "Bunda kost 1000 pintu",
+      moto: "Jangan terlalu berharap sama manusia, ntar kecewa.",
+      carouselPhoto: "https://images.pexels.com/photos/31958556/pexels-photo-31958556.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      detailPhoto: "https://images.pexels.com/photos/31992126/pexels-photo-31992126.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/fw604d50hgbwaopn4wi61/iis.mp3?rlkey=4pjdmziniq2663z4p0isnigpd&st=pf49ujes&raw=1",
+      whatsapp: "https://wa.me/+6285733029384",
+      instagram: "https://instagram.com/ix.tqya/"
+    },
+    {
+      id: 6,
+      shortName: "Tammim",
+      fullName: "M. Tammim Danil Fatah",
+      age: 19,
+      hobby: "Olahraga & bermain game",
+      ambition: "Programmer",
+      moto: "Jangan pernah membenci seseorang yang pernah menjadi alasanmu untuk jatuh cinta.",
+      carouselPhoto: "https://images.pexels.com/photos/31957786/pexels-photo-31957786.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      detailPhoto: "https://images.pexels.com/photos/31980277/pexels-photo-31980277.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/zjgb78l63o6mx9sf8dkm3/tamim.mp3?rlkey=8lomm5ngke97kqx3m7vhbkgpw&st=bce5al51&raw=1",
+      whatsapp: "https://wa.me/+6281252496596",
+      instagram: "https://instagram.com/tamimdanil_/"
+    },
+    {
+      id: 7,
+      shortName: "Zaki",
+      fullName: "M. Lutfi Azzaki",
+      age: 18,
+      hobby: "Login",
+      ambition: " Sp.B. ",
+      moto: "A smooth sea never made a skilled sailor",
+      carouselPhoto: "https://images.pexels.com/photos/31958712/pexels-photo-31958712.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      detailPhoto: "https://images.pexels.com/photos/31987197/pexels-photo-31987197.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/30cw8luugszmr4biv43yq/zaki.mp3?rlkey=nzpmaiyfur23vn4g1yxx2xpe9&st=dit51itw&raw=1",
+      whatsapp: "https://wa.me/+6281230117570",
+      instagram: "https://instagram.com/ltfazzaki/"
+    },
+    {
+      id: 8,
+      shortName: "Faris",
+      fullName: "Naufal Faris Aditya",
+      age: 18,
+      hobby: "Travelling",
+      ambition: "Menjadi orang sukses",
+      moto: "Kau boleh bermimpi sesuka hatimu, tapi jangan karena mimpimu belum tercapai kau jadi putus asa.",
+      carouselPhoto: "https://images.pexels.com/photos/31958255/pexels-photo-31958255.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      detailPhoto: "https://images.pexels.com/photos/31986331/pexels-photo-31986331.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/xrto705kcu1lwkq9hjqvr/faris.mp3?rlkey=bi9thsalam3czd9xvfz6fvn5w&st=9c0wkcuj&raw=1",
+      whatsapp: "https://wa.me/+6285607645822",
+      instagram: "https://instagram.com/n4uf4lfaris_/"
+    },
+    {
+      id: 9,
+      shortName: "Rizqi",
+      fullName: "Rizqi Itmam Rofi'i",
+      age: 18,
+      hobby: "Mendengarkan musik, Menyanyi, Membaca",
+      ambition: "Dokter Hewan",
+      moto: "Bermimpilah setinggi langit. Jika engkau jatuh, engkau akan jatuh di antara bintang-bintang.",
+      carouselPhoto: "https://images.pexels.com/photos/31958275/pexels-photo-31958275.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      detailPhoto: "https://images.pexels.com/photos/31980275/pexels-photo-31980275.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/rtt6zdr25zj6w04cjucb3/rizqi.mp3?rlkey=m67qgnnilknx8vhdfxryb54q3&st=yar3nkp8&raw=1",
+      whatsapp: "https://wa.me/+6282333073174",
+      instagram: "https://instagram.com/magixx_26/"
+    },
+    {
+      id: 10,
+      shortName: "Satria",
+      fullName: "Satria Panca Nugraha",
+      age: 18,
+      hobby: "Futsal & Flag Footbal",
+      ambition: "Tentara",
+      moto: "Apapun rintangan atau masalah yang datang di hidupmu jangan lah kau jadikan kata menyerah itu sebagai solusinya.",
+      carouselPhoto: "https://images.pexels.com/photos/31980059/pexels-photo-31980059.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      detailPhoto: "https://images.pexels.com/photos/31980273/pexels-photo-31980273.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/afiejoijkcqilqlmktbla/satria.mp4?rlkey=6q40tkrcvnk8g9tdk41oa5ufv&st=8s3gjud7&raw=1",
+      whatsapp: "https://wa.me/+62895332471818",
+      instagram: "https://instagram.com/satriapancaaa_/"
+    },
+    {
+      id: 11,
+      shortName: "Sondra",
+      fullName: "Sondra Toti Mahardika",
+      age: 18,
+      hobby: "Halusinasi",
+      ambition: "Mandor",
+      moto: "Tetap menjadi diri sendiri disaat banyak orang ingin merubahmu.",
+      carouselPhoto: "https://images.pexels.com/photos/31958254/pexels-photo-31958254.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      detailPhoto: "https://images.pexels.com/photos/31980276/pexels-photo-31980276.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/hdhjr6nfk893vrhtusex0/sondra.mp3?rlkey=od9rbgm40iyp2gwzwprxd4w8y&st=jxovf7cd&raw=1",
+      whatsapp: "https://wa.me/+6282245955178",
+      instagram: "https://instagram.com/osdnrx/"
+    },
+    {
+      id: 12,
+      shortName: "Zahra",
+      fullName: "Zahra Amelia Dickna",
+      age: 18,
+      hobby: "Observasi",
+      ambition: "Fighting for my dream, not for my life",
+      moto: "Matilah engkau mati, Engkau akan lahir berkali-kali.",
+      carouselPhoto: "https://images.pexels.com/photos/31956584/pexels-photo-31956584.jpeg?auto=compress&cs=tinysrgb&w=600&lazy=load",
+      detailPhoto: "https://images.pexels.com/photos/31986361/pexels-photo-31986361.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1", // Foto persegi panjang
+      favoriteSong: "https://www.dropbox.com/scl/fi/neyun572u0morgwwz5pc2/zahra.mp3?rlkey=qdvf45282g8m96papkeevvidl&st=mh0wejcl&raw=1",
+      whatsapp: "https://wa.me/+6282334917279",
+      instagram: "https://instagram.com/azaxdnra/"
+    }
+  ];
+
+  // References
+  const carousel = document.getElementById('carousel');
+  const groupSection = document.getElementById('groupSection');
+  const carouselContainer = document.getElementById('carouselContainer');
+  const memberDetail = document.getElementById('memberDetail');
+  const backBtn = document.getElementById('backBtn');
+  const navGroup = document.getElementById('navGroup');
+  const navMembers = document.getElementById('navMembers');
+
+  // Overlay references
+  const photoOverlay = document.getElementById('photoOverlay');
+  const overlayImg = photoOverlay.querySelector('img');
+  const closeOverlayBtn = document.getElementById('closeOverlayBtn');
+
+  // Detail elements
+  const detailPhoto = document.getElementById('detailPhoto');
+  const detailFullName = document.getElementById('detailFullName');
+  const detailAge = document.getElementById('detailAge');
+  const detailHobby = document.getElementById('detailHobby');
+  const detailAmbition = document.getElementById('detailAmbition');
+  const detailMoto = document.getElementById('detailMoto');
+  const detailAudio = document.getElementById('detailAudio');
+  const whatsappLink = document.getElementById('whatsappLink');
+  const instagramLink = document.getElementById('instagramLink');
+
+  // Initialize carousel
+  function initCarousel() {
+    members.forEach(member => {
+      const card = document.createElement('article');
+      card.className = 'member-card';
+      card.tabIndex = 0;
+      card.setAttribute('role', 'listitem');
+      card.setAttribute('aria-label', `Anggota Tim ${member.shortName}`);
+
+      card.innerHTML = `
+        <img class="member-photo" src="${member.carouselPhoto}" alt="Foto ${member.shortName}" loading="lazy" />
+        <h3 class="member-name">${member.shortName}</h3>
+      `;
+
+      card.addEventListener('click', () => openMemberDetail(member));
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openMemberDetail(member);
+        }
+      });
+
+      carousel.appendChild(card);
+    });
+  }
+
+  // Show group photo page
+  function showGroupPage() {
+    groupSection.classList.remove('hidden');
+    carouselContainer.classList.add('hidden');
+    memberDetail.classList.remove('active');
+    navGroup.classList.add('active');
+    navGroup.setAttribute('aria-selected', 'true');
+    navMembers.classList.remove('active');
+    navMembers.setAttribute('aria-selected', 'false');
+    detailAudio.pause();
+    detailAudio.currentTime = 0;
+  }
+
+  // Show members page
+  function showMembersPage() {
+    groupSection.classList.add('hidden');
+    carouselContainer.classList.remove('hidden');
+    memberDetail.classList.remove('active');
+    navGroup.classList.remove('active');
+    navGroup.setAttribute('aria-selected', 'false');
+    navMembers.classList.add('active');
+    navMembers.setAttribute('aria-selected', 'true');
+    detailAudio.pause();
+    detailAudio.currentTime = 0;
+  }
+
+  // Open member detail
+  function openMemberDetail(member) {
+    groupSection.classList.add('hidden');
+    carouselContainer.classList.add('hidden');
+
+    detailPhoto.src = member.detailPhoto; // Foto persegi panjang
+    detailPhoto.alt = `Foto lengkap ${member.fullName}`;
+    detailFullName.textContent = member.fullName;
+    detailAge.textContent = member.age;
+    detailHobby.textContent = member.hobby;
+    detailAmbition.textContent = member.ambition;
+    detailMoto.textContent = member.moto;
+    detailAudio.src = member.favoriteSong;
+    detailAudio.currentTime = 0;
+    detailAudio.play().catch((e) => {
+      console.log("Autoplay diblokir oleh browser:", e);
+    });
+
+    // Set contact links
+    whatsappLink.href = member.whatsapp;
+    whatsappLink.setAttribute('aria-label', `WhatsApp ${member.fullName}`);
+    instagramLink.href = member.instagram;
+    instagramLink.setAttribute('aria-label', `Instagram ${member.fullName}`);
+
+    memberDetail.classList.add('active');
+
+    memberDetail.scrollTop = 0;
+    backBtn.focus();
+  }
+
+  // Back button handler
+  backBtn.addEventListener('click', () => {
+    memberDetail.classList.remove('active');
+    showMembersPage();
+  });
+
+  // Navigation buttons
+  navGroup.addEventListener('click', showGroupPage);
+  navMembers.addEventListener('click', showMembersPage);
+
+  // Overlay for group photo
+  groupSection.querySelectorAll('.group-photos img').forEach(img => {
+    img.addEventListener('click', () => {
+      overlayImg.src = img.src;
+      overlayImg.alt = img.alt || 'Foto besar tim';
+      photoOverlay.classList.add('visible');
+      photoOverlay.setAttribute('aria-hidden', 'false');
+      photoOverlay.focus();
+      document.body.style.overflow = 'hidden';
+    });
+  });
+
+  function closeOverlay() {
+    photoOverlay.classList.remove('visible');
+    photoOverlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+  closeOverlayBtn.addEventListener('click', closeOverlay);
+  photoOverlay.addEventListener('click', (e) => {
+    if(e.target === photoOverlay) {
+      closeOverlay();
+    }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && photoOverlay.classList.contains('visible')) {
+      closeOverlay();
+    }
+  });
+
+  // Particle canvas
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let particlesArray;
+
+  function initCanvas() {
+    canvas.width = 350;
+    canvas.height = 700;
+  }
+
+  class Particle {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 3 + 1;
+      this.speedX = (Math.random() - 0.5) * 0.3;
+      this.speedY = (Math.random() - 0.5) * 0.3;
+      this.opacity = Math.random() * 0.5 + 0.1;
+    }
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+
+      if(this.x > canvas.width) this.x = 0;
+      else if(this.x < 0) this.x = canvas.width;
+
+      if(this.y > canvas.height) this.y = 0;
+      else if(this.y < 0) this.y = canvas.height;
+    }
+    draw() {
+      ctx.fillStyle = `rgba(243, 156, 18, ${this.opacity})`;
+      ctx.shadowColor = `rgba(243, 156, 18, ${this.opacity * 0.6})`;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function initParticles() {
+    particlesArray = [];
+    const numberOfParticles = 50;
+    for(let i = 0; i < numberOfParticles; i++) {
+      particlesArray.push(new Particle());
+    }
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particlesArray.forEach(p => {
+      p.update();
+      p.draw();
+    });
+    requestAnimationFrame(animateParticles);
+  }
+
+  // Initialization
+  initCanvas();
+  initParticles();
+  animateParticles();
+  initCarousel();
+  showGroupPage();
+  // Autoplay lagu utama saat halaman dimuat
+window.addEventListener('load', function () {
+  const mainAudio = document.getElementById('mainAudio');
+  mainAudio.volume = 0.4;
+  mainAudio.play().catch(e => {
+    console.log("Autoplay halaman utama diblokir oleh browser:", e);
+  });
+});
+</script>
+<audio id="mainAudio" autoplay loop>
+  <source src="https://www.dropbox.com/scl/fi/ozyv5uq4dtkz4hh58mroh/frvr-song.mp4?rlkey=3drtrboki6ad5h3l3scw9k0wo&st=p4kyqz4l&raw=1" type="audio/mpeg" />
+  Browser Anda tidak mendukung elemen audio.
+</audio>
+<script>
+  // Setelah halaman dimuat, unmute setelah sedikit delay (bypass blokir autoplay)
+  window.addEventListener("DOMContentLoaded", () => {
+      const audio = document.getElementById("bgm");
+      setTimeout(() => {
+          // Menambahkan event listener untuk body
+          const playAudio = () => {
+              audio.muted = false;
+              audio.play().catch(e => {
+                  console.log("Autoplay ditolak browser, tunggu interaksi pengguna");
+              });
+              // Hapus event listener setelah audio diputar
+              document.body.removeEventListener("click", playAudio);
+              document.body.removeEventListener("touchstart", playAudio);
+          };
+          document.body.addEventListener("click", playAudio);
+          document.body.addEventListener("touchstart", playAudio);
+      }, 500); // tunda sedikit agar browser tidak langsung blok
+  });
+</script>
+</body>
+</html>
